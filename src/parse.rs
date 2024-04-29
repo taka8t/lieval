@@ -118,7 +118,6 @@ fn to_rpn(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                             op_stack.pop().unwrap();
                             if let Some(Token::Function(_)) = op_stack.last() {
                                 rpn_stack.push(op_stack.pop().unwrap());
-                                // todo: if custom function arguments cnt
                             }
                             continue;
                         },

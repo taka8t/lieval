@@ -1,4 +1,4 @@
-use crate::token::{Token, Value};
+use crate::token::{Function, Token, Value};
 use crate::parse::{parse_str_to_rpn};
 use crate::context::Context;
 use crate::error::EvalError;
@@ -23,7 +23,10 @@ impl Expr {
         self
     }
 
-    // pub fn set_func(&mut self) -> &mut Self {}
+    pub fn set_func(&mut self, name: &str, n: usize, f: fn(&[Value]) -> Value) -> &mut Self {
+        self.context.set_func(name, n, f);
+        self
+    }
 
     pub fn eval(&mut self) -> Result<Vec<Value>, EvalError> {
         eval_with_context(&self.expr, &self.context)
@@ -69,6 +72,9 @@ pub(crate) fn eval(tokens: &[Token]) -> Result<Vec<Value>, EvalError> {
                     return Err(EvalError::WrongExpression);
                 }
             },
+            Token::Function(Function::Custom(s)) => {
+                return Err(EvalError::UndefinedFunction(s.clone()));
+            }
             Token::Function(func) => {
                 // builtin func
                 let n_args = func.num_args();
@@ -91,8 +97,6 @@ pub(crate) fn eval(tokens: &[Token]) -> Result<Vec<Value>, EvalError> {
                 else {
                     // unimplemented
                 }
-
-                // todo: match custom func
             },
             _ => {
                 return Err(EvalError::WrongExpression);
@@ -102,6 +106,7 @@ pub(crate) fn eval(tokens: &[Token]) -> Result<Vec<Value>, EvalError> {
     Ok(output)
 }
 
+#[allow(dead_code)]
 fn partial_eval(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
     let mut output = Vec::with_capacity(8);
     for token in tokens.iter() {
@@ -134,8 +139,10 @@ fn partial_eval(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                     return Err(EvalError::WrongExpression);
                 }
             },
+            Token::Function(Function::Custom(_)) => {
+                output.push(token.clone());
+            }
             Token::Function(func) => {
-                // builtin func
                 let n_args = func.num_args();
                 if n_args == 1 {
                     let top = output.pop();
@@ -167,8 +174,6 @@ fn partial_eval(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                 else {
                     // unimplemented
                 }
-
-                // todo: match custom func
             },
             _ => {
                 return Err(EvalError::WrongExpression);
@@ -207,8 +212,45 @@ pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<V
                     return Err(EvalError::WrongExpression);
                 }
             },
+            Token::Function(Function::Custom(s)) => {
+                if let Some(fc) = context.get_func(s) {
+                    match fc.get_arg_len() {
+                        0 => {
+                            output.push(fc.call(&[]));
+                        },
+                        1 => {
+                            if let Some(v) = output.pop() {
+                                output.push(fc.call(&[v]));
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        },
+                        2 => {
+                            if let (Some(v2), Some(v1)) = (output.pop(), output.pop()) {
+                                output.push(fc.call(&[v1, v2]));
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        },
+                        n => {
+                            let args = output.iter().rev().take(n).copied().collect::<Vec<Value>>();
+                            if args.len() == n {
+                                output.truncate(output.len() - n);
+                                output.push(fc.call(&args));
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        }
+                    }
+                }
+                else {
+                    return Err(EvalError::UndefinedFunction(s.clone()));
+                }
+            }
             Token::Function(func) => {
-                // builtin func
                 let n_args = func.num_args();
                 if n_args == 1 {
                     if let Some(v) = output.pop() {
@@ -229,8 +271,6 @@ pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<V
                 else {
                     // unimplemented
                 }
-
-                // todo: match custom func
             },
             _ => {
                 return Err(EvalError::WrongExpression);
@@ -280,6 +320,67 @@ pub(crate) fn partial_eval_with_context(tokens: &[Token], context: &Context) -> 
                     return Err(EvalError::WrongExpression);
                 }
             },
+            Token::Function(Function::Custom(s)) => {
+                if let Some(fc) = context.get_func(s) {
+                    match fc.get_arg_len() {
+                        0 => {
+                            output.push(Token::Value(fc.call(&[])));
+                        },
+                        1 => {
+                            let top = output.pop();
+                            if let Some(Token::Value(v)) = top {
+                                output.push(Token::Value(fc.call(&[v])));
+                            }
+                            else if let Some(t) = top {
+                                output.push(t);
+                                output.push(token.clone());
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        },
+                        2 => {
+                            let top = (output.pop(), output.pop());
+                            if let (Some(Token::Value(v2)), Some(Token::Value(v1))) = top {
+                                output.push(Token::Value(fc.call(&[v1, v2])));
+                            }
+                            else if let (Some(t1), Some(t2)) = top {
+                                output.push(t2);
+                                output.push(t1);
+                                output.push(token.clone());
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        },
+                        n => {
+                            if output.len() >= n {
+                                let args = output.iter()
+                                    .rev()
+                                    .take(n)
+                                    .filter_map(|t| match t {
+                                        Token::Value(v) => Some(*v),
+                                        _ => None
+                                    })
+                                    .collect::<Vec<Value>>();
+                                if args.len() == n {
+                                    output.truncate(output.len() - n);
+                                    output.push(Token::Value(fc.call(&args)));
+                                }
+                                else {
+                                    output.push(token.clone());
+                                }
+                            }
+                            else {
+                                return Err(EvalError::WrongExpression);
+                            }
+                        }
+                    }
+                }
+                else {
+                    output.push(token.clone());
+                }
+            }
             Token::Function(func) => {
                 // builtin func
                 let n_args = func.num_args();
@@ -313,8 +414,6 @@ pub(crate) fn partial_eval_with_context(tokens: &[Token], context: &Context) -> 
                 else {
                     // unimplemented
                 }
-
-                // todo: match custom func
             },
             _ => {
                 return Err(EvalError::WrongExpression);

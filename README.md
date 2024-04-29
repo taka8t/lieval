@@ -41,6 +41,8 @@ You can assign numerical values to variables and evaluate them using `Context`.
 ```rust
 use lieval::*;
 
+let mut context = Context::new();
+
 assert_eq!(
     eval_from_str_with_context("1 / x", context.set_value("x", 2.0)),
     Ok(vec![0.5])
@@ -51,6 +53,23 @@ assert_eq!(expr.set_var("x", 2.0).eval(), Ok(vec![2.0]));
 
 let mut expr = Expr::new("sqrt(2+x+y)").unwrap();
 assert_eq!(expr.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(vec![3.0]));
+```
+
+You can use custom functions.
+
+```rust
+use lieval::*;
+
+let mut context = Context::new();
+
+assert_eq!(
+    eval_from_str_with_context("1 + func(2,3)", context.set_func("func", 2, |x| x[0] + x[1])),
+    Ok(vec![6.0])
+);
+assert_eq!(
+    eval_from_str_with_context("1 + func(x)", context.set_func("func", 1, |x| x[0] * 2.0).set_value("x", 1.0)),
+    Ok(vec![3.0])
+);
 ```
 
 You can evaluate multiple expressions separated by commas.

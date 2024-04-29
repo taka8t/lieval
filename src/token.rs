@@ -48,7 +48,7 @@ pub enum Function {
     Sqrt,
     Exp,
     Ln,
-    // Custom(String)
+    Custom(String)
 }
 
 impl Function {
@@ -62,6 +62,7 @@ impl Function {
             | Self::Sqrt
             | Self::Ln
             | Self::Exp => 1,
+            _ => {unreachable!()},
         }
     }
     pub(crate) fn eval1(&self, arg: Value) -> Value {
@@ -160,7 +161,7 @@ impl FromStr for Function {
             "sqrt" => Ok(Function::Sqrt),
             "ln" => Ok(Function::Ln),
             "exp" => Ok(Function::Exp),
-            _ => Err(EvalError::FunctionNotFound(s.to_owned())) // todo: custom function
+            _ => Ok(Function::Custom(s.to_owned()))
         }
     }
 }
