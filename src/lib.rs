@@ -7,7 +7,7 @@
 //! - Parse and evaluate simple mathematical expressions.
 //!     - Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`
 //!     - Parentheses for expression grouping
-//!     - Common mathematical functions: `sin`, `cos`, `tan`, `pow`, `sqrt`, `exp`, `ln`, etc.
+//!     - Common mathematical functions: `sin`, `cos`, `atan`, `cosh`, `pow`, `sqrt`, `hypot`, `exp`, `ln`, `div_euclid`, `floor` etc...
 //! - Support for variables, operators, and functions.
 //! - Minimal dependencies.
 //! - Provides a simple and easy-to-use API.

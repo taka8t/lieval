@@ -1,6 +1,6 @@
 [package]
 name = "lieval"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["taka8 <taka87874k4@gmail.com>"]
 edition = "2021"
 description = "A lightweight Rust crate for parsing and evaluating mathematical expressions from strings."
