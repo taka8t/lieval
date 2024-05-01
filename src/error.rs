@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum EvalError {
     FunctionNotFound(String),
+    ConstantNotFound,
     InvalidString(String),
     UnexpectedParenthesis,
     UndefinedFunction(String),
@@ -15,6 +16,7 @@ impl std::fmt::Display for EvalError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Self::InvalidString(s) => {write!(f, "string {} is Invalid", s)},
+            Self::ConstantNotFound => {write!(f, "Consts is not found", )},
             Self::FunctionNotFound(s) => {write!(f, "function {} is unimplemented", s)},
             Self::UnexpectedParenthesis => {write!(f, "unexpected or unbalanced parehthesis",)},
             Self::UndefinedFunction(s) => {write!(f, "function {} is undefined", s)},

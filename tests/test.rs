@@ -27,6 +27,20 @@ fn function_test() {
     assert_eq!(eval_from_str("powi(1 - 2 * 3, 2)"), Ok(vec![25.0]));
     assert_eq!(eval_from_str("pow(1 - 2 * 3, 2)"), Ok(vec![(-5f64).powf(2.0)]));
     assert_eq!(eval_from_str("-powf(1 - 2 * 3, 2)"), Ok(vec![-5f64.powf(2.0)]));
+
+    assert_eq!(eval_from_str("cos(PI)"), Ok(vec![-1.0]));
+    assert_eq!(eval_from_str("cos(TAU)"), Ok(vec![1.0]));
+    assert_eq!(eval_from_str("ln(E)"), Ok(vec![1.0]));
+
+    assert_eq!(eval_from_str("max(1, 2)"), Ok(vec![2.0]));
+    assert_eq!(eval_from_str("min(1, 2)"), Ok(vec![1.0]));
+    assert_eq!(eval_from_str("abs(-1)"), Ok(vec![1.0]));
+    assert_eq!(eval_from_str("acos(-1)"), Ok(vec![std::f64::consts::PI]));
+    assert_eq!(eval_from_str("sinh(1)"), Ok(vec![1.0f64.sinh()]));
+    assert_eq!(eval_from_str("hypot(3,4)"), Ok(vec![5.0]));
+    assert_eq!(eval_from_str("div_euclid(7,2)"), Ok(vec![3.0]));
+    assert_eq!(eval_from_str("floor(1.49)"), Ok(vec![1.0]));
+    assert_eq!(eval_from_str("log(5,2)"), Ok(vec![5.0f64.log(2.0)]));
 }
 
 #[test]

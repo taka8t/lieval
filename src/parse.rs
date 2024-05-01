@@ -1,4 +1,4 @@
-use crate::token::{PreToken, Token, Value, UnaryOp, BinaryOp, Function};
+use crate::token::{PreToken, Token, Value, UnaryOp, BinaryOp, Function, Constant};
 use crate::error::EvalError;
 use crate::util::is_literalchar;
 use std::str::FromStr;
@@ -35,6 +35,9 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Token>, EvalError> {
             PreToken::Literal(s) => {
                 if let Ok(v) = s.parse::<Value>() {
                     tokens.push(Token::Value(v));
+                }
+                else if let Ok(c) = s.parse::<Constant>() {
+                    tokens.push(Token::Value(c.eval()));
                 }
                 else if let Some(hc) = s.chars().next() {
                     if (hc.is_alphabetic() || hc == '_')
