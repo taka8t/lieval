@@ -8,6 +8,7 @@
 //!     - Basic arithmetic operations: `+`, `-`, `*`, `/`, `%`
 //!     - Parentheses for expression grouping
 //!     - Common mathematical functions: `sin`, `cos`, `atan`, `cosh`, `pow`, `sqrt`, `hypot`, `exp`, `ln`, `div_euclid`, `floor` etc...
+//!     - mathematical constants such as `PI`, `TAU`, and `E`.
 //! - Support for variables, operators, and functions.
 //! - Minimal dependencies.
 //! - Provides a simple and easy-to-use API.
@@ -33,7 +34,7 @@
 //! );
 //! 
 //! let mut expr = Expr::new("sqrt(4)").unwrap();
-//! assert_eq!(expr.eval(), Ok(vec![2.0]));
+//! assert_eq!(expr.eval(), Ok(2.0));
 //! ```
 //! 
 //! You can assign numerical values to variables and evaluate them using `Context`.
@@ -42,16 +43,17 @@
 //! use lieval::*;
 //! 
 //! let mut context = Context::new();
+//! 
 //! assert_eq!(
 //!     eval_from_str_with_context("1 / x", context.set_value("x", 2.0)),
 //!     Ok(vec![0.5])
 //! );
 //! 
 //! let mut expr = Expr::new("sqrt(2+x)").unwrap();
-//! assert_eq!(expr.set_var("x", 2.0).eval(), Ok(vec![2.0]));
+//! assert_eq!(expr.set_var("x", 2.0).eval(), Ok(2.0));
 //! 
 //! let mut expr = Expr::new("sqrt(2+x+y)").unwrap();
-//! assert_eq!(expr.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(vec![3.0]));
+//! assert_eq!(expr.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(3.0));
 //! ```
 //! 
 //! You can use custom functions.
@@ -71,13 +73,13 @@
 //! );
 //! ```
 //! 
-//! You can evaluate multiple expressions separated by commas.
+//! You can evaluate multiple expressions separated by commas or semicolons.
 //! 
 //! ```rust
 //! use lieval::*;
 //! 
 //! assert_eq!(
-//!     eval_from_str("1 + 2, sin(3 + 0.14), 7 % 3"), 
+//!     eval_from_str("1 + 2, sin(3 + 0.14); 7 % 3"), 
 //!     Ok(vec![3.0, (3.14f64).sin(), 7.0 % 3.0])
 //! );
 //! ```
@@ -94,9 +96,35 @@
 //!     .unwrap();
 //! let mut x = 1.0;
 //! for _ in 0..10 {
-//!     x = expr.set_var("x", x).eval().unwrap()[0];
-//!     assert_eq!(expr.set_var("x", x).eval(), Ok(vec![1.0 + 0.5 * x.sin()]));
+//!     x = expr.set_var("x", x).eval().unwrap();
+//!     assert_eq!(expr.set_var("x", x).eval(), Ok(1.0 + 0.5 * x.sin()));
 //! }
+//! ```
+//! 
+//! You can perform arithmetic operations between Expr objects.
+//! 
+//! ```rust
+//! use lieval::*;
+//! 
+//! let expr1 = Expr::new("1+x").unwrap();
+//! let expr2 = Expr::new("2*x").unwrap();
+//! assert_eq!((expr1 + expr2).set_var("x", 2.0).eval(), Ok(7.0));
+//! 
+//! let expr1 = Expr::new("1+x, 2+x, 3+x").unwrap();
+//! let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+//! assert_eq!((expr1 + expr2).set_var("x", 2.0).evals(), Ok(vec![7.0, 10.0, 13.0]));
+//! 
+//! // broadcasting
+//! let expr1 = Expr::new("1+x").unwrap();
+//! let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+//! assert_eq!((expr1 * expr2).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
+//! 
+//! // If variables conflict, the variable in the left expression takes precedence,
+//! // so use partial_eval beforehand.
+//! let expr1 = Expr::new("1+x").unwrap();
+//! let mut expr2 = Expr::new("2*x").unwrap();
+//! expr2.set_var("x", 3.0).partial_eval().unwrap();
+//! assert_eq!((expr1 * expr2).set_var("x", 2.0).eval(), Ok(18.0));
 //! ```
 //! 
 //! ## API Documentation

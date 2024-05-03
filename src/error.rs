@@ -8,6 +8,7 @@ pub enum EvalError {
     UndefinedVariable(String),
     WrongExpression,
     WrongArguments(usize),// token + usize
+    WrongExprIndex(usize),
 }
 
 impl std::error::Error for EvalError {}
@@ -23,6 +24,7 @@ impl std::fmt::Display for EvalError {
             Self::UndefinedVariable(s) => {write!(f, "variable {} is undefined", s)},
             Self::WrongExpression => {write!(f, "wrong Expression.")},
             Self::WrongArguments(n) => {write!(f, "expected number of Arguments is {}", n)},
+            Self::WrongExprIndex(n) => {write!(f, "Wrong Expr Vec index {}", n)},
         }   
     }
 }

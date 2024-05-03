@@ -3,9 +3,13 @@ use crate::error::EvalError;
 use crate::util::is_literalchar;
 use std::str::FromStr;
 
-pub fn parse_str_to_rpn(expr: &str) -> Result<Vec<Token>, EvalError> {
-    let tokens = pretoken_to_tokens(&parse_str_to_pretokens(expr)?)?;
-    to_rpn(&tokens)
+pub fn parse_str_to_rpn(expr: &str) -> Result<Vec<Vec<Token>>, EvalError> {
+    let tokens_vec = pretoken_to_tokens(&parse_str_to_pretokens(expr)?)?;
+    let mut ret_tokens = vec![];
+    for tokens in tokens_vec {
+        ret_tokens.push(to_rpn(&tokens)?);
+    }
+    Ok(ret_tokens)
 }
 
 fn parse_str_to_pretokens(expr: &str) -> Result<Vec<PreToken>, EvalError> {
@@ -27,9 +31,11 @@ fn parse_str_to_pretokens(expr: &str) -> Result<Vec<PreToken>, EvalError> {
     Ok(pretokens)
 }
 
-fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Token>, EvalError> {
+fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalError> {
+    let mut tokens_vec = vec![];
     let mut tokens = vec![];
     let mut ptiter = pretokens.iter().peekable();
+    let mut paren_count = 0;
     while let Some(pretoken) = ptiter.next() {
         match pretoken {
             PreToken::Literal(s) => {
@@ -84,16 +90,38 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Token>, EvalError> {
             },
             PreToken::LeftParen => {
                 tokens.push(Token::LeftParen);
+                paren_count += 1;
             },
             PreToken::RightParen => {
                 tokens.push(Token::RightParen);
+                paren_count -= 1;
             },
+            PreToken::SemiColon => {
+                tokens_vec.push(std::mem::take(&mut tokens));
+            }
             PreToken::Comma => {
-                tokens.push(Token::Comma);
+                if paren_count > 0 {
+                    tokens.push(Token::Comma);
+                }
+                else {
+                    tokens_vec.push(std::mem::take(&mut tokens));
+                }
             },
         }
+        if paren_count < 0 {
+            return Err(EvalError::UnexpectedParenthesis);
+        }
     }
-    Ok(tokens)
+    if paren_count == 0 {
+        if !tokens.is_empty() {
+            tokens_vec.push(std::mem::take(&mut tokens));
+        }
+        Ok(tokens_vec)
+    }
+    else {
+        Err(EvalError::UnexpectedParenthesis)
+    }
+    
 }
 
 fn to_rpn(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {

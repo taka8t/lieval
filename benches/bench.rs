@@ -20,7 +20,7 @@ fn eval(b: &mut Bencher) {
 
 #[bench]
 fn eval_obj(b: &mut Bencher) {
-    let mut expr_obj = Expr::new(EXPR1).unwrap();
+    let expr_obj = Expr::new(EXPR1).unwrap();
     b.iter(|| {
         expr_obj.eval().unwrap();
     });
@@ -33,12 +33,12 @@ fn eval_with_context(b: &mut Bencher) {
     let mut xn = 1.0;
     b.iter(|| {
         for _ in 0..N {
-            let xs = expr_obj
+            let nx = expr_obj
             .set_var("a1", 2.0)
             .set_var("a2", 3.0)
             .set_var("x", xn)
             .eval().unwrap();
-            xn = xs[0];
+            xn = nx;
         }
     });
 }
@@ -49,11 +49,11 @@ fn eval_with_context2(b: &mut Bencher) {
     let mut xn = 1.0;
     b.iter(|| {
         for _ in 0..N {
-            let xs = expr_obj
+            let nx = expr_obj
             .set_var("y", 1.0)
             .set_var("x", xn)
             .eval().unwrap();
-            xn = xs[0];
+            xn = nx;
         }
     });
 }
@@ -66,10 +66,10 @@ fn partial_eval_with_context(b: &mut Bencher) {
     let mut xn = 1.0;
     b.iter(|| {
         for _ in 0..N {
-            let xs = expr_obj
+            let nx = expr_obj
                 .set_var("x", xn)
                 .eval().unwrap();
-            xn = xs[0];
+            xn = nx;
         }
     });
 }
@@ -82,10 +82,10 @@ fn partial_eval_with_context2(b: &mut Bencher) {
     let mut xn = 1.0;
     b.iter(|| {
         for _ in 0..N {
-            let xs = expr_obj
+            let nx = expr_obj
                 .set_var("x", xn)
                 .eval().unwrap();
-            xn = xs[0];
+            xn = nx;
         }
     });
 }

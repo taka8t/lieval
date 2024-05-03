@@ -90,7 +90,7 @@ fn custom_func_test() {
     );
 
     let mut expr_obj = Expr::new("1 + func(x)").unwrap();
-    assert_eq!(expr_obj.set_var("x", 3.0).set_func("func", 1, |x| x[0] * 2.0).eval(), Ok(vec![7.0]));
+    assert_eq!(expr_obj.set_var("x", 3.0).set_func("func", 1, |x| x[0] * 2.0).eval(), Ok(7.0));
 
     let mut expr_obj = Expr::new("1 + func1(x) + func2()").unwrap();
     assert_eq!(
@@ -98,7 +98,7 @@ fn custom_func_test() {
         .set_func("func1", 1, |x| x[0] * 2.0)
         .partial_eval().unwrap()
         .set_func("func2", 0, |_| 1.5).eval(), 
-        Ok(vec![8.5])
+        Ok(8.5)
     );
 
     let mut expr_obj = Expr::new("1 + func1(1, x, y, 4) + z").unwrap();
@@ -108,7 +108,7 @@ fn custom_func_test() {
         .set_var("y", 3.0)
         .partial_eval().unwrap()
         .set_var("z", -12.0).eval(), 
-        Ok(vec![0.0])
+        Ok(0.0)
     );
 }
 
@@ -146,21 +146,21 @@ fn expr_with_context_test() {
 
 #[test]
 fn expr_object_test() {
-    let mut expr_obj = Expr::new("sqrt(4)").unwrap();
-    assert_eq!(expr_obj.eval(), Ok(vec![2.0]));
+    let expr_obj = Expr::new("sqrt(4)").unwrap();
+    assert_eq!(expr_obj.eval(), Ok(2.0));
 
     let mut expr_obj = Expr::new("sqrt(2+x)").unwrap();
-    assert_eq!(expr_obj.set_var("x", 2.0).eval(), Ok(vec![2.0]));
+    assert_eq!(expr_obj.set_var("x", 2.0).eval(), Ok(2.0));
 
     let mut expr_obj = Expr::new("sqrt(2+x+y)").unwrap();
-    assert_eq!(expr_obj.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(vec![3.0]));
+    assert_eq!(expr_obj.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(3.0));
 
     let expr1 = "0.5 + 3.0 * -cos(sin(1.0 - 2.0) + 1.5) + 5.5";
     let expr2 = "0.5 + x * -cos(sin(1.0 - 2.0) + 1.5) + 5.5";
-    let result1 = Ok(vec![0.5 + 3.0 * -((1f64 - 2.0).sin() + 1.5).cos() + 5.5]);
-    let result2 = Ok(vec![0.5 + -1.5 * -((1f64 - 2.0).sin() + 1.5).cos() + 5.5]);
+    let result1 = Ok(0.5 + 3.0 * -((1f64 - 2.0).sin() + 1.5).cos() + 5.5);
+    let result2 = Ok(0.5 + -1.5 * -((1f64 - 2.0).sin() + 1.5).cos() + 5.5);
 
-    let mut expr_obj = Expr::new(&expr1).unwrap();
+    let expr_obj = Expr::new(&expr1).unwrap();
     assert_eq!(expr_obj.eval(), result1);
 
     let mut expr_obj = Expr::new(&expr2).unwrap();
@@ -171,6 +171,22 @@ fn expr_object_test() {
     expr_obj.partial_eval().unwrap();
     assert_eq!(expr_obj.set_var("x", 3.0).eval(), result1);
     assert_eq!(expr_obj.set_var("x", -1.5).eval(), result2);
+
+    let expr_obj = Expr::new("1+1, 2*3+1, sin(PI)").unwrap();
+    assert_eq!(expr_obj.eval(), Ok(2.0));
+    assert_eq!(expr_obj.evals(), Ok(vec![2.0, 7.0, std::f64::consts::PI.sin()]));
+
+    let mut expr_obj = Expr::new("x+1, 2*3+y; sin(PI)").unwrap();
+    expr_obj.partial_evals().unwrap();
+    assert_eq!(expr_obj.set_var("x", 1.0).eval(), Ok(2.0));
+    assert_eq!(expr_obj.set_var("y", 1.0).eval_index(1), Ok(7.0));
+    assert_eq!(expr_obj.evals(), Ok(vec![2.0, 7.0, std::f64::consts::PI.sin()]));
+
+    let mut expr_obj = Expr::new("x+1, 2*3+y; sin(PI)").unwrap();
+    expr_obj.set_var("x", 1.0).set_var("y", 1.0).partial_evals().unwrap();
+    assert_eq!(expr_obj.eval(), Ok(2.0));
+    assert_eq!(expr_obj.eval_index(1), Ok(7.0));
+    assert_eq!(expr_obj.evals(), Ok(vec![2.0, 7.0, std::f64::consts::PI.sin()]));
 }
 
 #[test]
@@ -182,7 +198,38 @@ fn partial_eval_test() {
         .unwrap();
     let mut x = 1.0;
     for _ in 0..10 {
-        x = expr_obj.set_var("x", x).eval().unwrap()[0];
-        assert_eq!(expr_obj.set_var("x", x).eval(), Ok(vec![1.0 + 0.5 * x.sin()]));
+        x = expr_obj.set_var("x", x).eval().unwrap();
+        assert_eq!(expr_obj.set_var("x", x).eval(), Ok(1.0 + 0.5 * x.sin()));
     }
+}
+
+#[test]
+fn expr_opeation_test() {
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x").unwrap();
+    assert_eq!((expr1 + expr2).set_var("x", 2.0).eval(), Ok(7.0));
+
+    // If two variables conflict, the variable in the left expression takes precedence,
+    // so use partial_eval beforehand.
+    let expr1 = Expr::new("1+x").unwrap();
+    let mut expr2 = Expr::new("2*x").unwrap();
+    expr2.set_var("x", 3.0).partial_eval().unwrap();
+    assert_eq!((expr1 * expr2).set_var("x", 2.0).eval(), Ok(18.0));
+
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x").unwrap();
+    assert_eq!((expr1 - expr2).set_var("x", 2.0).eval(), Ok(-1.0));
+
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x").unwrap();
+    assert_eq!((expr1 / expr2).set_var("x", 2.0).eval(), Ok(3.0f64/4.0));
+
+    let expr1 = Expr::new("1+x, 2+x, 3+x").unwrap();
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((expr1 + expr2).set_var("x", 2.0).evals(), Ok(vec![7.0, 10.0, 13.0]));
+
+    // broadcasting
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((expr1 * expr2).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
 }

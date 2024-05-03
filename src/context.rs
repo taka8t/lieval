@@ -24,7 +24,7 @@ impl FuncClosure {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Context {
     value_map: HashMap<String, Value>,
     func_map: HashMap<String, FuncClosure>,
@@ -54,6 +54,18 @@ impl Context {
 
     pub fn get_func(&self, key: &str) -> Option<&FuncClosure> {
         self.func_map.get(key)
+    }
+
+    
+    pub fn ctx_merge(lhs: &Context, rhs: &Context) -> Self {
+        let mut value_map = rhs.value_map.clone();
+        value_map.extend(lhs.value_map.clone());
+        let mut func_map = rhs.func_map.clone();
+        func_map.extend(lhs.func_map.clone());
+        Self {
+            value_map,
+            func_map,
+        }
     }
 
     // fn set_value_from_str(&mut self, expr: &str) {

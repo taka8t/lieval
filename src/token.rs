@@ -41,7 +41,7 @@ impl BinaryOp {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Constant {
     PI,
-    TAU,
+    Tau,
     E
 }
 
@@ -49,7 +49,7 @@ impl Constant {
     pub(crate) fn eval(&self) -> Value {
         match self {
             Self::PI => std::f64::consts::PI,
-            Self::TAU => std::f64::consts::TAU,
+            Self::Tau => std::f64::consts::TAU,
             Self::E => std::f64::consts::E
         }
     }
@@ -188,6 +188,7 @@ pub enum PreToken {
     Percent,
     LeftParen,
     RightParen,
+    SemiColon,
     Comma,
     Literal(String)
 }
@@ -203,6 +204,7 @@ impl FromStr for PreToken {
             "%" => Ok(PreToken::Percent),
             "(" => Ok(PreToken::LeftParen),
             ")" => Ok(PreToken::RightParen),
+            ";" => Ok(PreToken::SemiColon),
             "," => Ok(PreToken::Comma),
             c if c.chars().all(is_literalchar) => {
                 Ok(PreToken::Literal(c.to_owned()))
@@ -217,7 +219,7 @@ impl FromStr for Constant {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "PI" => Ok(Constant::PI),
-            "TAU" => Ok(Constant::TAU),
+            "TAU" => Ok(Constant::Tau),
             "E" => Ok(Constant::E),
             _ => Err(EvalError::ConstantNotFound),
         }

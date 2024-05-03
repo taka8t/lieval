@@ -1,11 +1,13 @@
-use crate::token::{Function, Token, Value};
+use crate::token::{Function, Token, Value, BinaryOp};
 use crate::parse::{parse_str_to_rpn};
 use crate::context::Context;
 use crate::error::EvalError;
 
+use std::ops;
+
 #[derive(Debug, Clone)]
 pub struct Expr {
-    expr: Vec<Token>,
+    expr: Vec<Vec<Token>>,
     context: Context
 }
 
@@ -28,27 +30,133 @@ impl Expr {
         self
     }
 
-    pub fn eval(&mut self) -> Result<Vec<Value>, EvalError> {
-        eval_with_context(&self.expr, &self.context)
+    pub fn eval(&self) -> Result<Value, EvalError> {
+        self.eval_index(0)
+    }
+
+    pub fn evals(&self) -> Result<Vec<Value>, EvalError> {
+        let mut values = vec![];
+        for expr in self.expr.iter() {
+            values.push(eval_with_context(expr, &self.context)?);
+        }
+        Ok(values)
+    }
+
+    pub fn eval_index(&self, id: usize) -> Result<Value, EvalError> {
+        if self.expr.len() <= id {
+            Err(EvalError::WrongExprIndex(id))
+        }
+        else {
+            eval_with_context(&self.expr[id], &self.context)
+        }
     }
 
     pub fn partial_eval(&mut self) -> Result<&mut Self, EvalError> {
-        self.expr = partial_eval_with_context(&self.expr, &self.context)?;
+        self.partial_eval_index(0)
+    }
+
+    pub fn partial_evals(&mut self) -> Result<&mut Self, EvalError> {
+        for i in 0..self.expr.len() {
+            self.expr[i] = partial_eval_with_context(&self.expr[i], &self.context)?;
+        }
         Ok(self)
     }
-    
-    // add.sub,mul... expr op expr
+
+    pub fn partial_eval_index(&mut self, id: usize) -> Result<&mut Self, EvalError> {
+        if self.expr.len() <= id {
+            Err(EvalError::WrongExprIndex(id))
+        }
+        else {
+            self.expr[id] = partial_eval_with_context(&self.expr[id], &self.context)?;
+            Ok(self)
+        }
+    }
+
+    fn apply_operator(&mut self, other: Expr, op: Token) {
+        if self.expr.len() == other.expr.len() {
+            for (l, r) in self.expr.iter_mut().zip(other.expr.into_iter()) {
+                l.extend(r);
+                l.push(op.clone());
+            }
+        }
+        else if self.expr.len() == 1 {
+            self.expr.resize(other.expr.len(), self.expr[0].clone());
+            for (l, r) in self.expr.iter_mut().zip(other.expr.into_iter()) {
+                l.extend(r);
+                l.push(op.clone());
+            }
+        }
+        else if other.expr.len() == 1 {
+            for (l, r) in self.expr.iter_mut().zip(other.expr.iter().cycle().cloned()) {
+                l.extend(r);
+                l.push(op.clone());
+            }
+        }
+        else {
+            panic!("The number of exprs must be the same, or either one must be equal to 1");
+        }
+    }
+}
+
+impl ops::Add for Expr {
+    type Output = Self;
+
+    fn add(mut self, other: Self) -> Self {
+        self.context = Context::ctx_merge(&self.context, &other.context);
+        self.apply_operator(other, Token::Binary(BinaryOp::Add));
+        self
+    }
+}
+
+impl ops::Sub for Expr {
+    type Output = Self;
+
+    fn sub(mut self, other: Self) -> Self {
+        self.context = Context::ctx_merge(&self.context, &other.context);
+        self.apply_operator(other, Token::Binary(BinaryOp::Sub));
+        self
+    }
+}
+
+impl ops::Mul for Expr {
+    type Output = Self;
+
+    fn mul(mut self, other: Self) -> Self {
+        self.context = Context::ctx_merge(&self.context, &other.context);
+        self.apply_operator(other, Token::Binary(BinaryOp::Mul));
+        self
+    }
+}
+
+impl ops::Div for Expr {
+    type Output = Self;
+
+    fn div(mut self, other: Self) -> Self {
+        self.context = Context::ctx_merge(&self.context, &other.context);
+        self.apply_operator(other, Token::Binary(BinaryOp::Div));
+        self
+    }
 }
 
 pub fn eval_from_str(expr: &str) -> Result<Vec<Value>, EvalError> {
-    eval(&parse_str_to_rpn(expr)?)
+    let tokens_vec = parse_str_to_rpn(expr)?;
+    let mut values = vec![];
+    for tokens in tokens_vec {
+        values.push(eval(&tokens)?);
+    }
+    Ok(values)
 }
 
 pub fn eval_from_str_with_context(expr: &str, context: &Context) -> Result<Vec<Value>, EvalError> {
-    eval_with_context(&parse_str_to_rpn(expr)?, context)
+    let tokens_vec = parse_str_to_rpn(expr)?;
+    let mut values = vec![];
+    for tokens in tokens_vec {
+        values.push(eval_with_context(&tokens, context)?);
+    }
+    Ok(values)
 }
 
-pub(crate) fn eval(tokens: &[Token]) -> Result<Vec<Value>, EvalError> {
+pub(crate) fn eval(tokens: &[Token]) -> Result<Value, EvalError> {
     let mut output = Vec::with_capacity(8);
     for token in tokens.iter() {
         match token {
@@ -103,7 +211,15 @@ pub(crate) fn eval(tokens: &[Token]) -> Result<Vec<Value>, EvalError> {
             }
         }
     }
-    Ok(output)
+    if output.len() != 1 {
+        Err(EvalError::WrongExpression)
+    }
+    else if let Some(v) = output.pop() {
+        Ok(v)
+    }
+    else {
+        Err(EvalError::WrongExpression)
+    }
 }
 
 #[allow(dead_code)]
@@ -183,7 +299,7 @@ fn partial_eval(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
     Ok(output)
 }
 
-pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<Vec<Value>, EvalError> {
+pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<Value, EvalError> {
     let mut output = Vec::with_capacity(8);
     for token in tokens.iter() {
         match token {
@@ -277,7 +393,15 @@ pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<V
             }
         }
     }
-    Ok(output)
+    if output.len() != 1 {
+        Err(EvalError::WrongExpression)
+    }
+    else if let Some(v) = output.pop() {
+        Ok(v)
+    }
+    else {
+        Err(EvalError::WrongExpression)
+    }
 }
 
 pub(crate) fn partial_eval_with_context(tokens: &[Token], context: &Context) -> Result<Vec<Token>, EvalError> {
