@@ -50,6 +50,8 @@ fn assoc_test() {
     assert_eq!(eval_from_str("((1 + 2)) * 3"), Ok(vec![9.0]));
     assert_eq!(eval_from_str("(1 - (2 + 3)) * 5"), Ok(vec![-20.0]));
     assert_eq!(eval_from_str("powf((3-2)*5, sin(5-(3-1)))"), Ok(vec![((3f64-2.0)*5.0).powf(3f64.sin())]));
+    assert_eq!(eval_from_str("-(-(-1))+2"), Ok(vec![1.0]));
+    assert_eq!(eval_from_str("-(-(-1*2)+3)+4"), Ok(vec![-1.0]));
 }
 
 #[test]
@@ -66,6 +68,10 @@ fn custom_func_test() {
     assert_eq!(
         eval_from_str_with_context("1 + func(2,3)", context.set_func("func", 2, |x| x[0] + x[1])),
         Ok(vec![6.0])
+    );
+    assert_eq!(
+        eval_from_str_with_context("1 + func(2,3,4,5)", context.set_func("func", 4, |x| -x[0] - x[1] + x[2] + x[3])),
+        Ok(vec![5.0])
     );
     assert_eq!(
         eval_from_str_with_context("1 + func(x)", context.set_func("func", 1, |x| x[0] * 2.0).set_value("x", 1.0)),

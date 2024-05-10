@@ -1,6 +1,6 @@
 use crate::token::{PreToken, Token, Value, UnaryOp, BinaryOp, Function, Constant};
 use crate::error::EvalError;
-use crate::util::is_literalchar;
+use crate::util::{is_literalchar, is_identstr};
 use std::str::FromStr;
 
 pub fn parse_str_to_rpn(expr: &str) -> Result<Vec<Vec<Token>>, EvalError> {
@@ -45,18 +45,12 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalErr
                 else if let Ok(c) = s.parse::<Constant>() {
                     tokens.push(Token::Value(c.eval()));
                 }
-                else if let Some(hc) = s.chars().next() {
-                    if (hc.is_alphabetic() || hc == '_')
-                    && s.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                        if let Some(PreToken::LeftParen) = ptiter.peek() {
-                            tokens.push(Token::Function(s.parse::<Function>()?));
-                        }
-                        else {
-                            tokens.push(Token::Var(s.to_string()));
-                        }
+                else if is_identstr(&s) {
+                    if let Some(PreToken::LeftParen) = ptiter.peek() {
+                        tokens.push(Token::Function(s.parse::<Function>()?));
                     }
                     else {
-                        return Err(EvalError::InvalidString(s.clone()));
+                        tokens.push(Token::Var(s.to_string()));
                     }
                 }
                 else {

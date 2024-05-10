@@ -98,45 +98,36 @@ impl Expr {
     }
 }
 
-impl ops::Add for Expr {
-    type Output = Self;
-
-    fn add(mut self, other: Self) -> Self {
-        self.context = Context::ctx_merge(&self.context, &other.context);
-        self.apply_operator(other, Token::Binary(BinaryOp::Add));
-        self
-    }
+macro_rules! expr_op {
+    ($op:path, $name:ident, $token:expr) => {
+        impl $op for Expr {
+            type Output = Self;
+            fn $name(mut self, other: Self) -> Self {
+                self.context = Context::ctx_merge(&self.context, &other.context);
+                self.apply_operator(other, $token);
+                self
+            }
+        }
+    };
+    (assign $op:path, $name:ident, $token:expr) => {
+        impl $op for Expr {
+            fn $name(&mut self, other: Self) {
+                self.context = Context::ctx_merge(&self.context, &other.context);
+                self.apply_operator(other, $token);
+            }
+        }
+    };
 }
 
-impl ops::Sub for Expr {
-    type Output = Self;
+expr_op!(ops::Add, add, Token::Binary(BinaryOp::Add));
+expr_op!(ops::Sub, sub, Token::Binary(BinaryOp::Sub));
+expr_op!(ops::Mul, mul, Token::Binary(BinaryOp::Mul));
+expr_op!(ops::Div, div, Token::Binary(BinaryOp::Div));
 
-    fn sub(mut self, other: Self) -> Self {
-        self.context = Context::ctx_merge(&self.context, &other.context);
-        self.apply_operator(other, Token::Binary(BinaryOp::Sub));
-        self
-    }
-}
-
-impl ops::Mul for Expr {
-    type Output = Self;
-
-    fn mul(mut self, other: Self) -> Self {
-        self.context = Context::ctx_merge(&self.context, &other.context);
-        self.apply_operator(other, Token::Binary(BinaryOp::Mul));
-        self
-    }
-}
-
-impl ops::Div for Expr {
-    type Output = Self;
-
-    fn div(mut self, other: Self) -> Self {
-        self.context = Context::ctx_merge(&self.context, &other.context);
-        self.apply_operator(other, Token::Binary(BinaryOp::Div));
-        self
-    }
-}
+expr_op!(assign ops::AddAssign, add_assign, Token::Binary(BinaryOp::Add));
+expr_op!(assign ops::SubAssign, sub_assign, Token::Binary(BinaryOp::Sub));
+expr_op!(assign ops::MulAssign, mul_assign, Token::Binary(BinaryOp::Mul));
+expr_op!(assign ops::DivAssign, div_assign, Token::Binary(BinaryOp::Div));
 
 pub fn eval_from_str(expr: &str) -> Result<Vec<Value>, EvalError> {
     let tokens_vec = parse_str_to_rpn(expr)?;
@@ -351,7 +342,7 @@ pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<V
                             }
                         },
                         n => {
-                            let args = output.iter().rev().take(n).copied().collect::<Vec<Value>>();
+                            let args = output.iter().rev().take(n).copied().rev().collect::<Vec<Value>>();
                             if args.len() == n {
                                 output.truncate(output.len() - n);
                                 output.push(fc.call(&args));
@@ -486,6 +477,7 @@ pub(crate) fn partial_eval_with_context(tokens: &[Token], context: &Context) -> 
                                         Token::Value(v) => Some(*v),
                                         _ => None
                                     })
+                                    .rev()
                                     .collect::<Vec<Value>>();
                                 if args.len() == n {
                                     output.truncate(output.len() - n);
