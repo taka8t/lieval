@@ -193,6 +193,8 @@ fn expr_object_test() {
     assert_eq!(expr_obj.eval(), Ok(2.0));
     assert_eq!(expr_obj.eval_index(1), Ok(7.0));
     assert_eq!(expr_obj.evals(), Ok(vec![2.0, 7.0, std::f64::consts::PI.sin()]));
+
+    assert_eq!(ex!("x+1, 2*3+y; sin(PI)").set_var("x", 1.0).set_var("y", 1.0).evals(), Ok(vec![2.0, 7.0, std::f64::consts::PI.sin()]));
 }
 
 #[test]
@@ -238,4 +240,18 @@ fn expr_opeation_test() {
     let expr1 = Expr::new("1+x").unwrap();
     let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
     assert_eq!((expr1 * expr2).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
+
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((3.0 * expr2).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
+
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((-expr2 * 3.0).set_var("x", 2.0).evals(), Ok(vec![-12.0, -18.0, -24.0]));
+    
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((expr2 * 3.0 + expr1).set_var("x", 2.0).evals(), Ok(vec![15.0, 21.0, 27.0]));
+
+    let expr1 = Expr::new("1+x").unwrap();
+    let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
+    assert_eq!((expr2 + ex!("x") * expr1).set_var("x", 2.0).evals(), Ok(vec![10.0, 12.0, 14.0]));
 }

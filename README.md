@@ -35,13 +35,16 @@ assert_eq!(
 
 let mut expr = Expr::new("sqrt(4)").unwrap();
 assert_eq!(expr.eval(), Ok(2.0));
+
+// using macro `ex!`
+assert_eq!(ex!("sqrt(4)").eval(), Ok(2.0));
 ```
 
 You can assign numerical values to variables and evaluate them using `Context`.
 
 ```rust
-use lieval::*;
-
+# use lieval::*;
+#
 let mut context = Context::new();
 
 assert_eq!(
@@ -49,18 +52,15 @@ assert_eq!(
     Ok(vec![0.5])
 );
 
-let mut expr = Expr::new("sqrt(2+x)").unwrap();
-assert_eq!(expr.set_var("x", 2.0).eval(), Ok(2.0));
-
-let mut expr = Expr::new("sqrt(2+x+y)").unwrap();
-assert_eq!(expr.set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(3.0));
+assert_eq!(ex!("sqrt(2+x)").set_var("x", 2.0).eval(), Ok(2.0));
+assert_eq!(ex!("sqrt(2+x+y)").set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(3.0));
 ```
 
 You can use custom functions.
 
 ```rust
-use lieval::*;
-
+# use lieval::*;
+# 
 let mut context = Context::new();
 
 assert_eq!(
@@ -68,22 +68,22 @@ assert_eq!(
     Ok(vec![6.0])
 );
 assert_eq!(
-    eval_from_str_with_context("1 + func(x)", context.set_func("func", 1, |x| x[0] * 2.0).set_value("x", 1.0)),
-    Ok(vec![3.0])
+    ex!("1 + func(x)").set_func("func", 1, |x| x[0] * 2.0).set_var("x", 1.0).eval(),
+    Ok(3.0)
 );
 ```
 
 You can evaluate multiple expressions separated by commas or semicolons.
 
 ```rust
-use lieval::*;
-
+# use lieval::*;
+# 
 assert_eq!(
     eval_from_str("1 + 2, sin(3 + 0.14); 7 % 3"), 
     Ok(vec![3.0, (3.14f64).sin(), 7.0 % 3.0])
 );
 
-let mut expr = Expr::new("sqrt(1+x); 1+3, hypot(x,4)").unwrap();
+let mut expr = ex!("sqrt(1+x); 1+3, hypot(x,4)");
 assert_eq!(expr.set_var("x", 3.0).evals(), Ok(vec![2.0, 4.0, 5.0]));
 assert_eq!(expr.eval(), Ok(2.0));
 assert_eq!(expr.eval_index(2), Ok(5.0));
@@ -92,9 +92,9 @@ assert_eq!(expr.eval_index(2), Ok(5.0));
 You can efficiently evaluate by precomputing using `partial_eval`.
 
 ```rust
-use lieval::*;
-
-let mut expr = Expr::new("a1 + a2 * sin(x)").unwrap();
+# use lieval::*;
+# 
+let mut expr = ex!("a1 + a2 * sin(x)");
 expr.set_var("a1", 1.0)
     .set_var("a2", 0.5)
     .partial_eval()
@@ -109,27 +109,23 @@ for _ in 0..10 {
 You can perform arithmetic operations between Expr objects.
 
 ```rust
-use lieval::*;
-
+# use lieval::*;
+# 
 let expr1 = Expr::new("1+x").unwrap();
-let expr2 = Expr::new("2*x").unwrap();
-assert_eq!((expr1 + expr2).set_var("x", 2.0).eval(), Ok(7.0));
-
-let expr1 = Expr::new("1+x, 2+x, 3+x").unwrap();
-let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
-assert_eq!((expr1 + expr2).set_var("x", 2.0).evals(), Ok(vec![7.0, 10.0, 13.0]));
+assert_eq!((expr1 + ex!("2*x")).set_var("x", 2.0).eval(), Ok(7.0));
+assert_eq!((ex!("1+x, 2+x, 3+x") + ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals(), Ok(vec![7.0, 10.0, 13.0]));
 
 // broadcasting
 let expr1 = Expr::new("1+x").unwrap();
 let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
-assert_eq!((expr1 * expr2).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
+assert_eq!((ex!("1+x") * ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
+assert_eq!((ex!("1+x") * 2.0 * ex!("x") + ex!("2*x, 3*x, 4*x") + 1.0).set_var("x", 2.0).evals(), Ok(vec![17.0, 19.0, 21.0]));
 
 // If variables conflict, the variable in the left expression takes precedence,
 // so use partial_eval beforehand.
-let expr1 = Expr::new("1+x").unwrap();
-let mut expr2 = Expr::new("2*x").unwrap();
-expr2.set_var("x", 3.0).partial_eval().unwrap();
-assert_eq!((expr1 * expr2).set_var("x", 2.0).eval(), Ok(18.0));
+let mut expr1 = Expr::new("2*x").unwrap();
+expr1.set_var("x", 3.0).partial_eval().unwrap();
+assert_eq!((-ex!("1+x") * expr1).set_var("x", 2.0).eval(), Ok(-18.0));
 ```
 
 ## API Documentation

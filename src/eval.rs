@@ -1,4 +1,4 @@
-use crate::token::{Function, Token, Value, BinaryOp};
+use crate::token::{Function, Token, Value, UnaryOp, BinaryOp};
 use crate::parse::{parse_str_to_rpn};
 use crate::context::Context;
 use crate::error::EvalError;
@@ -72,22 +72,22 @@ impl Expr {
         }
     }
 
-    fn apply_operator(&mut self, other: Expr, op: Token) {
-        if self.expr.len() == other.expr.len() {
-            for (l, r) in self.expr.iter_mut().zip(other.expr.into_iter()) {
+    fn apply_operator(&mut self, other: Vec<Vec<Token>>, op: Token) {
+        if self.expr.len() == other.len() {
+            for (l, r) in self.expr.iter_mut().zip(other.into_iter()) {
                 l.extend(r);
                 l.push(op.clone());
             }
         }
         else if self.expr.len() == 1 {
-            self.expr.resize(other.expr.len(), self.expr[0].clone());
-            for (l, r) in self.expr.iter_mut().zip(other.expr.into_iter()) {
+            self.expr.resize(other.len(), self.expr[0].clone());
+            for (l, r) in self.expr.iter_mut().zip(other.into_iter()) {
                 l.extend(r);
                 l.push(op.clone());
             }
         }
-        else if other.expr.len() == 1 {
-            for (l, r) in self.expr.iter_mut().zip(other.expr.iter().cycle().cloned()) {
+        else if other.len() == 1 {
+            for (l, r) in self.expr.iter_mut().zip(other.iter().cycle().cloned()) {
                 l.extend(r);
                 l.push(op.clone());
             }
@@ -98,36 +98,95 @@ impl Expr {
     }
 }
 
+#[macro_export]
+macro_rules! ex {
+    ($s:expr) => {
+        Expr::new($s).unwrap()
+    };
+}
+
 macro_rules! expr_op {
-    ($op:path, $name:ident, $token:expr) => {
+    (Expr, $op:path, $name:ident, $token:expr) => {
         impl $op for Expr {
-            type Output = Self;
-            fn $name(mut self, other: Self) -> Self {
+            type Output = Expr;
+            fn $name(mut self, other: Self) -> Expr {
                 self.context = Context::ctx_merge(&self.context, &other.context);
-                self.apply_operator(other, $token);
+                self.apply_operator(other.expr, $token);
                 self
             }
         }
     };
-    (assign $op:path, $name:ident, $token:expr) => {
+    (f64, $op:path, $name:ident, $token:expr) => {
+        impl $op for Expr {
+            type Output = Expr;
+            fn $name(mut self, other: f64) -> Expr {
+                self.apply_operator(vec![vec![Token::Value(other)]], $token);
+                self
+            }
+        }
+    };
+    (f64r, $op:path, $name:ident, $token:expr) => {
+        impl $op for f64 {
+            type Output = Expr;
+            fn $name(self, other: Expr) -> Expr {
+                let mut vexpr = Expr::new(&self.to_string()).unwrap();
+                vexpr.context = other.context.clone();
+                vexpr.apply_operator(other.expr, $token);
+                vexpr
+            }
+        }
+    };
+    (assign Expr, $op:path, $name:ident, $token:expr) => {
         impl $op for Expr {
             fn $name(&mut self, other: Self) {
                 self.context = Context::ctx_merge(&self.context, &other.context);
-                self.apply_operator(other, $token);
+                self.apply_operator(other.expr, $token);
+            }
+        }
+    };
+    (assign f64, $op:path, $name:ident, $token:expr) => {
+        impl $op for Expr {
+            fn $name(&mut self, other: f64) {
+                self.apply_operator(vec![vec![Token::Value(other)]], $token);
             }
         }
     };
 }
 
-expr_op!(ops::Add, add, Token::Binary(BinaryOp::Add));
-expr_op!(ops::Sub, sub, Token::Binary(BinaryOp::Sub));
-expr_op!(ops::Mul, mul, Token::Binary(BinaryOp::Mul));
-expr_op!(ops::Div, div, Token::Binary(BinaryOp::Div));
+expr_op!(Expr, ops::Add<Expr>, add, Token::Binary(BinaryOp::Add));
+expr_op!(Expr, ops::Sub<Expr>, sub, Token::Binary(BinaryOp::Sub));
+expr_op!(Expr, ops::Mul<Expr>, mul, Token::Binary(BinaryOp::Mul));
+expr_op!(Expr, ops::Div<Expr>, div, Token::Binary(BinaryOp::Div));
 
-expr_op!(assign ops::AddAssign, add_assign, Token::Binary(BinaryOp::Add));
-expr_op!(assign ops::SubAssign, sub_assign, Token::Binary(BinaryOp::Sub));
-expr_op!(assign ops::MulAssign, mul_assign, Token::Binary(BinaryOp::Mul));
-expr_op!(assign ops::DivAssign, div_assign, Token::Binary(BinaryOp::Div));
+expr_op!(assign Expr, ops::AddAssign<Expr>, add_assign, Token::Binary(BinaryOp::Add));
+expr_op!(assign Expr, ops::SubAssign<Expr>, sub_assign, Token::Binary(BinaryOp::Sub));
+expr_op!(assign Expr, ops::MulAssign<Expr>, mul_assign, Token::Binary(BinaryOp::Mul));
+expr_op!(assign Expr, ops::DivAssign<Expr>, div_assign, Token::Binary(BinaryOp::Div));
+
+expr_op!(f64, ops::Add<f64>, add, Token::Binary(BinaryOp::Add));
+expr_op!(f64, ops::Sub<f64>, sub, Token::Binary(BinaryOp::Sub));
+expr_op!(f64, ops::Mul<f64>, mul, Token::Binary(BinaryOp::Mul));
+expr_op!(f64, ops::Div<f64>, div, Token::Binary(BinaryOp::Div));
+
+expr_op!(assign f64, ops::AddAssign<f64>, add_assign, Token::Binary(BinaryOp::Add));
+expr_op!(assign f64, ops::SubAssign<f64>, sub_assign, Token::Binary(BinaryOp::Sub));
+expr_op!(assign f64, ops::MulAssign<f64>, mul_assign, Token::Binary(BinaryOp::Mul));
+expr_op!(assign f64, ops::DivAssign<f64>, div_assign, Token::Binary(BinaryOp::Div));
+
+expr_op!(f64r, ops::Add<Expr>, add, Token::Binary(BinaryOp::Add));
+expr_op!(f64r, ops::Sub<Expr>, sub, Token::Binary(BinaryOp::Sub));
+expr_op!(f64r, ops::Mul<Expr>, mul, Token::Binary(BinaryOp::Mul));
+expr_op!(f64r, ops::Div<Expr>, div, Token::Binary(BinaryOp::Div));
+
+impl ops::Neg for Expr {
+    type Output = Self;
+    fn neg(mut self) -> Self::Output {
+        for expr in self.expr.iter_mut() {
+            expr.push(Token::Unary(UnaryOp::Neg));
+        }
+        self
+    }
+}
 
 pub fn eval_from_str(expr: &str) -> Result<Vec<Value>, EvalError> {
     let tokens_vec = parse_str_to_rpn(expr)?;

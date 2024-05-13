@@ -45,7 +45,7 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalErr
                 else if let Ok(c) = s.parse::<Constant>() {
                     tokens.push(Token::Value(c.eval()));
                 }
-                else if is_identstr(&s) {
+                else if is_identstr(s) {
                     if let Some(PreToken::LeftParen) = ptiter.peek() {
                         tokens.push(Token::Function(s.parse::<Function>()?));
                     }
