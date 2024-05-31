@@ -253,7 +253,14 @@ pub(crate) fn eval(tokens: &[Token]) -> Result<Value, EvalError> {
                     }
                 }
                 else {
-                    // unimplemented
+                    let args = output.iter().rev().take(n_args).copied().rev().collect::<Vec<Value>>();
+                    if args.len() == n_args {
+                        output.truncate(output.len() - n_args);
+                        output.push(func.evaln(&args));
+                    }
+                    else {
+                        return Err(EvalError::WrongExpression);
+                    }
                 }
             },
             _ => {
@@ -338,7 +345,15 @@ fn partial_eval(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                     }
                 }
                 else {
-                    // unimplemented
+                    let args = output.iter().rev().take(n_args)
+                                .filter_map(|t| match t {
+                                    Token::Value(v) => Some(v),
+                                    _ => None
+                                }).copied().rev().collect::<Vec<Value>>();
+                    if args.len() == n_args {
+                        output.truncate(output.len() - n_args);
+                        output.push(Token::Value(func.evaln(&args)));
+                    }
                 }
             },
             _ => {
@@ -435,7 +450,14 @@ pub(crate) fn eval_with_context(tokens: &[Token], context: &Context) -> Result<V
                     }
                 }
                 else {
-                    // unimplemented
+                    let args = output.iter().rev().take(n_args).copied().rev().collect::<Vec<Value>>();
+                    if args.len() == n_args {
+                        output.truncate(output.len() - n_args);
+                        output.push(func.evaln(&args));
+                    }
+                    else {
+                        return Err(EvalError::WrongExpression);
+                    }
                 }
             },
             _ => {
@@ -587,7 +609,15 @@ pub(crate) fn partial_eval_with_context(tokens: &[Token], context: &Context) -> 
                     }
                 }
                 else {
-                    // unimplemented
+                    let args = output.iter().rev().take(n_args)
+                                .filter_map(|t| match t {
+                                    Token::Value(v) => Some(v),
+                                    _ => None
+                                }).copied().rev().collect::<Vec<Value>>();
+                    if args.len() == n_args {
+                        output.truncate(output.len() - n_args);
+                        output.push(Token::Value(func.evaln(&args)));
+                    }
                 }
             },
             _ => {

@@ -85,6 +85,11 @@ fn custom_func_test() {
         eval_from_str_with_context("1 + func(func(x))", context.set_func("func", 1, |x| x[0] * 2.0).set_value("x", 1.0)),
         Ok(vec![5.0])
     );
+    assert_eq!(
+        eval_from_str_with_context("1 + func(x) + func2(y)",
+        context.set_func("func", 1, |x| x[0] * 2.0).set_func("func2", 1, |x| x[0] + 3.0).set_value("x", 1.0).set_value("y", 2.0)),
+        Ok(vec![8.0])
+    );
 
     assert_eq!(
         eval_from_str_with_context("1 + func(1,x,y,4)",

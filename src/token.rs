@@ -147,8 +147,12 @@ impl Function {
             _ => {unreachable!()}
         }
     }
-    // fn evaln(&self, args: &[Value]) -> Value {
-    // }
+
+    pub(crate) fn evaln(&self, _args: &[Value]) -> Value {
+        match self {
+            _ => {unreachable!()}
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
