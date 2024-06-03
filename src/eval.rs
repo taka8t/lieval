@@ -71,6 +71,34 @@ impl Expr {
             Ok(self)
         }
     }
+    
+    pub fn vars(&self) -> Vec<String> {
+        let mut vars = self.expr.iter()
+                    .flatten()
+                    .filter_map(|t| {
+                        if let Token::Var(v) = t {Some(v.to_owned())}
+                        else {None}
+                    })
+                    .collect::<Vec<String>>();
+        vars.sort();
+        vars.dedup();
+        vars
+    }
+
+    pub fn var_items(&self) -> Vec<(String, Option<Value>)> {
+        let mut vars = self.expr.iter()
+                    .flatten()
+                    .filter_map(|t| {
+                        if let Token::Var(v) = t {
+                            Some((v.to_owned(), self.context.get_value(v).copied()))
+                        }
+                        else {None}
+                    })
+                    .collect::<Vec<(String, Option<Value>)>>();
+        vars.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        vars.dedup();
+        vars
+    }
 
     fn apply_operator(&mut self, other: Vec<Vec<Token>>, op: Token) {
         if self.expr.len() == other.len() {
