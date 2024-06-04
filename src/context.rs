@@ -1,5 +1,8 @@
 use crate::token::Value;
+#[cfg(not(feature="fxhash"))]
 use std::collections::HashMap;
+#[cfg(feature="fxhash")]
+use fxhash::FxHashMap;
 
 #[derive(Debug, Clone)]
 pub struct FuncClosure {
@@ -24,17 +27,34 @@ impl FuncClosure {
     }
 }
 
+#[cfg(not(feature="fxhash"))]
 #[derive(Debug, Clone, Default)]
 pub struct Context {
     value_map: HashMap<String, Value>,
     func_map: HashMap<String, FuncClosure>,
 }
 
+#[cfg(feature="fxhash")]
+#[derive(Debug, Clone, Default)]
+pub struct Context {
+    value_map: FxHashMap<String, Value>,
+    func_map: FxHashMap<String, FuncClosure>,
+}
+
 impl Context {
+    #[cfg(not(feature="fxhash"))]
     pub fn new() -> Self {
         Self {
             value_map: HashMap::new(),
             func_map: HashMap::new()
+        }
+    }
+
+    #[cfg(feature="fxhash")]
+    pub fn new() -> Self {
+        Self {
+            value_map: FxHashMap::default(),
+            func_map: FxHashMap::default()
         }
     }
 
