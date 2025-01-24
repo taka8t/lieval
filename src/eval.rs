@@ -95,7 +95,7 @@ impl Expr {
                         else {None}
                     })
                     .collect::<Vec<(String, Option<Value>)>>();
-        vars.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+        vars.sort_by(|a, b| a.partial_cmp(b).unwrap());
         vars.dedup();
         vars
     }

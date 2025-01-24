@@ -3,10 +3,6 @@ pub(crate) fn is_literalchar(c: char) -> bool {
 }
 
 pub(crate) fn is_identstr(s: &str) -> bool {
-    if let Some(t) = s.chars().next() {
-        (t.is_alphabetic() || t == '_') && s.chars().all(|c| c.is_alphanumeric() || c == '_')
-    }
-    else {
-        false
-    }
+    s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    && s.chars().find(|c| c.is_ascii_alphanumeric()).filter(|c| c.is_ascii_alphabetic()).is_some()
 }

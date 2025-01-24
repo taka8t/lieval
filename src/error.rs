@@ -7,7 +7,7 @@ pub enum EvalError {
     UndefinedFunction(String),
     UndefinedVariable(String),
     WrongExpression,
-    WrongArguments(usize),// token + usize
+    WrongArguments(usize),
     WrongExprIndex(usize),
 }
 
@@ -22,9 +22,9 @@ impl std::fmt::Display for EvalError {
             Self::UnexpectedParenthesis => {write!(f, "unexpected or unbalanced parehthesis",)},
             Self::UndefinedFunction(s) => {write!(f, "function {} is undefined", s)},
             Self::UndefinedVariable(s) => {write!(f, "variable {} is undefined", s)},
-            Self::WrongExpression => {write!(f, "wrong Expression.")},
-            Self::WrongArguments(n) => {write!(f, "expected number of Arguments is {}", n)},
-            Self::WrongExprIndex(n) => {write!(f, "Wrong Expr Vec index {}", n)},
+            Self::WrongExpression => {write!(f, "Wrong expression.")},
+            Self::WrongArguments(n) => {write!(f, "Expected number of arguments is {}", n)},
+            Self::WrongExprIndex(n) => {write!(f, "Wrong Expr Vec index: {}", n)},
         }   
     }
 }

@@ -4,10 +4,10 @@ use crate::util::{is_literalchar, is_identstr};
 use std::str::FromStr;
 
 pub fn parse_str_to_rpn(expr: &str) -> Result<Vec<Vec<Token>>, EvalError> {
-    let tokens_vec = pretoken_to_tokens(&parse_str_to_pretokens(expr)?)?;
+    let tokens_vec = pretoken_to_tokens(parse_str_to_pretokens(expr)?)?;
     let mut ret_tokens = vec![];
     for tokens in tokens_vec {
-        ret_tokens.push(to_rpn(&tokens)?);
+        ret_tokens.push(to_rpn(tokens)?);
     }
     Ok(ret_tokens)
 }
@@ -31,10 +31,10 @@ fn parse_str_to_pretokens(expr: &str) -> Result<Vec<PreToken>, EvalError> {
     Ok(pretokens)
 }
 
-fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalError> {
+fn pretoken_to_tokens(pretokens: Vec<PreToken>) -> Result<Vec<Vec<Token>>, EvalError> {
     let mut tokens_vec = vec![];
     let mut tokens = vec![];
-    let mut ptiter = pretokens.iter().peekable();
+    let mut ptiter = pretokens.into_iter().peekable();
     let mut paren_count = 0;
     while let Some(pretoken) = ptiter.next() {
         match pretoken {
@@ -42,10 +42,10 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalErr
                 if let Ok(v) = s.parse::<Value>() {
                     tokens.push(Token::Value(v));
                 }
-                else if let Ok(c) = s.parse::<Constant>() {
+                else if let Ok(c) = s.replace("_", "").parse::<Constant>() {
                     tokens.push(Token::Value(c.eval()));
                 }
-                else if is_identstr(s) {
+                else if is_identstr(&s) {
                     if let Some(PreToken::LeftParen) = ptiter.peek() {
                         tokens.push(Token::Function(s.parse::<Function>()?));
                     }
@@ -54,23 +54,18 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalErr
                     }
                 }
                 else {
-                    return Err(EvalError::InvalidString(s.clone()));
+                    return Err(EvalError::InvalidString(s));
                 }
             },
             PreToken::Plus => {
                 tokens.push(Token::Binary(BinaryOp::Add));
             },
             PreToken::Minus => {
-                if let Some(token) = tokens.last() {
-                    match token {
-                        Token::RightParen | Token::Value(_) | Token::Var(_) => {
-                            tokens.push(Token::Binary(BinaryOp::Sub));
-                        },
-                        _ => {tokens.push(Token::Unary(UnaryOp::Neg));}
-                    }
-                }
-                else {
-                    tokens.push(Token::Unary(UnaryOp::Neg));
+                match tokens.last() {
+                    Some(Token::RightParen) | Some(Token::Value(_)) | Some(Token::Var(_)) => {
+                        tokens.push(Token::Binary(BinaryOp::Sub));
+                    },
+                    _ => {tokens.push(Token::Unary(UnaryOp::Neg));}
                 }
             },
             PreToken::Asterisk => {
@@ -118,15 +113,15 @@ fn pretoken_to_tokens(pretokens: &[PreToken]) -> Result<Vec<Vec<Token>>, EvalErr
     
 }
 
-fn to_rpn(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
+fn to_rpn(tokens: Vec<Token>) -> Result<Vec<Token>, EvalError> {
     // Shunting yard
     let mut rpn_stack: Vec<Token> = vec![];
     let mut op_stack: Vec<Token> = vec![];
 
-    for token in tokens.iter() {
+    for token in tokens.into_iter() {
         match token {
             Token::Value(_) | Token::Var(_) => {
-                rpn_stack.push(token.clone());
+                rpn_stack.push(token);
             },
             _ => {
                 let (l_asc, _) = token.precedence();
@@ -137,7 +132,7 @@ fn to_rpn(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                     }
                     rpn_stack.push(op_stack.pop().unwrap());
                 }
-                if *token == Token::RightParen {
+                if token == Token::RightParen {
                     match op_stack.last() {
                         Some(Token::LeftParen) => {
                             op_stack.pop().unwrap();
@@ -151,8 +146,8 @@ fn to_rpn(tokens: &[Token]) -> Result<Vec<Token>, EvalError> {
                         }
                     }
                 }
-                if *token != Token::Comma {
-                    op_stack.push(token.clone());
+                if token != Token::Comma {
+                    op_stack.push(token);
                 }
             } 
         }

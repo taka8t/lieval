@@ -87,7 +87,4 @@ impl Context {
             func_map,
         }
     }
-
-    // fn set_value_from_str(&mut self, expr: &str) {
-    // }
 }
