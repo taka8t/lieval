@@ -112,14 +112,15 @@ fn custom_func_test() {
         Ok(8.5)
     );
 
-    let mut expr_obj = Expr::new("1 + func1(1, x, y, 4) + z").unwrap();
+    let mut expr_obj = Expr::new("1 + func1(1, x, y, 4) + z + func2(x, y)").unwrap();
     assert_eq!(
         expr_obj.set_func("func1", 4, |x| x[0] + x[1] * x[2] + x[3])
+        .set_func("func2", 2, |x| x[0] + x[1])
         .set_var("x", 2.0)
         .set_var("y", 3.0)
         .partial_eval().unwrap()
         .set_var("z", -12.0).eval(), 
-        Ok(0.0)
+        Ok(5.0)
     );
 }
 

@@ -1,3 +1,5 @@
+use crate::eval::Expr;
+use crate::error::EvalError;
 use crate::token::Value;
 #[cfg(not(feature="fxhash"))]
 use std::collections::HashMap;
@@ -86,5 +88,13 @@ impl Context {
             value_map,
             func_map,
         }
+    }
+
+    pub fn eval(&mut self, expr: &str) -> Result<Value, EvalError> {
+        Expr::new(expr)?.apply_context(self).eval()
+    }
+
+    pub fn evals(&mut self, expr: &str) -> Result<Vec<Value>, EvalError> {
+        Expr::new(expr)?.apply_context(self).evals()
     }
 }

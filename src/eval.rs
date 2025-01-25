@@ -30,6 +30,11 @@ impl Expr {
         self
     }
 
+    pub fn apply_context(&mut self, ctx: &Context) -> &mut Self {
+        self.context = Context::ctx_merge(&self.context, ctx);
+        self
+    }
+
     pub fn eval(&self) -> Result<Value, EvalError> {
         self.eval_index(0)
     }

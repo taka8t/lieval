@@ -27,17 +27,18 @@
 //! ```rust
 //! use lieval::*;
 //! 
-//! assert_eq!(eval_from_str("1.0 + 2 * (3 - 1)"), Ok(vec![5.0]));
+//! assert_eq!(eval_from_str("1.0 + 2 * (3 - 1)").unwrap(), vec![5.0]);
+//! assert_eq!(eval_from_str(&format!("1.0 + 2 * ({} - 1)", 3)).unwrap(), vec![5.0]);
 //! assert_eq!(
-//!     eval_from_str("1.0 - sin(3.14 / 2) * powf(1.5, 2.5)"),
-//!     Ok(vec![1.0 - (3.14f64 / 2.0).sin() * 1.5f64.powf(2.5)])
+//!     eval_from_str("1.0 - sin(3.14 / 2) * powf(1.5, 2.5)").unwrap(),
+//!     vec![1.0 - (3.14f64 / 2.0).sin() * 1.5f64.powf(2.5)]
 //! );
 //! 
 //! let mut expr = Expr::new("sqrt(4)").unwrap();
-//! assert_eq!(expr.eval(), Ok(2.0));
+//! assert_eq!(expr.eval().unwrap(), 2.0);
 //! 
 //! // using macro `ex!`
-//! assert_eq!(ex!("sqrt(4)").eval(), Ok(2.0));
+//! assert_eq!(ex!("sqrt(4)").eval().unwrap(), 2.0);
 //! ```
 //! 
 //! You can assign numerical values to variables and evaluate them using `Context`.
@@ -48,12 +49,16 @@
 //! let mut context = Context::new();
 //! 
 //! assert_eq!(
-//!     eval_from_str_with_context("1 / x", context.set_value("x", 2.0)),
-//!     Ok(vec![0.5])
+//!     eval_from_str_with_context("1 / x", context.set_value("x", 2.0)).unwrap(),
+//!     vec![0.5]
+//! );
+//! assert_eq!(
+//!     context.eval("1 / x").unwrap(),
+//!     0.5
 //! );
 //! 
-//! assert_eq!(ex!("sqrt(2+x)").set_var("x", 2.0).eval(), Ok(2.0));
-//! assert_eq!(ex!("sqrt(2+x+y)").set_var("x", 2.0).set_var("y", 5.0).eval(), Ok(3.0));
+//! assert_eq!(ex!("sqrt(2+x)").set_var("x", 2.0).eval().unwrap(), 2.0);
+//! assert_eq!(ex!("sqrt(2+x+y)").set_var("x", 2.0).set_var("y", 5.0).eval().unwrap(), 3.0);
 //! ```
 //! 
 //! You can use custom functions.
@@ -64,12 +69,12 @@
 //! let mut context = Context::new();
 //! 
 //! assert_eq!(
-//!     eval_from_str_with_context("1 + func(2,3)", context.set_func("func", 2, |x| x[0] + x[1])),
-//!     Ok(vec![6.0])
+//!     eval_from_str_with_context("1 + func(2,3)", context.set_func("func", 2, |x| x[0] + x[1])).unwrap(),
+//!     vec![6.0]
 //! );
 //! assert_eq!(
-//!     ex!("1 + func(x)").set_func("func", 1, |x| x[0] * 2.0).set_var("x", 1.0).eval(),
-//!     Ok(3.0)
+//!     context.eval("1 + func(2,3)").unwrap(),
+//!     6.0
 //! );
 //! ```
 //! 
@@ -78,15 +83,20 @@
 //! ```rust
 //! # use lieval::*;
 //! # 
+//! 
 //! assert_eq!(
-//!     eval_from_str("1 + 2, sin(3 + 0.14); 7 % 3"), 
-//!     Ok(vec![3.0, (3.14f64).sin(), 7.0 % 3.0])
+//!     eval_from_str("1 + 2, sin(3 + 0.14); 7 % 3").unwrap(), 
+//!     vec![3.0, (3.14f64).sin(), 7.0 % 3.0]
 //! );
 //! 
+//! let mut context = Context::new();
+//! context.set_value("x", 3.0);
+//! assert_eq!(context.evals("sqrt(1+x); 1+3, hypot(x,4)").unwrap(), vec![2.0, 4.0, 5.0]);
+//! 
 //! let mut expr = ex!("sqrt(1+x); 1+3, hypot(x,4)");
-//! assert_eq!(expr.set_var("x", 3.0).evals(), Ok(vec![2.0, 4.0, 5.0]));
-//! assert_eq!(expr.eval(), Ok(2.0));
-//! assert_eq!(expr.eval_index(2), Ok(5.0));
+//! assert_eq!(expr.set_var("x", 3.0).evals().unwrap(), vec![2.0, 4.0, 5.0]);
+//! assert_eq!(expr.eval().unwrap(), 2.0);
+//! assert_eq!(expr.eval_index(2).unwrap(), 5.0);
 //! ```
 //! 
 //! You can efficiently evaluate by precomputing using `partial_eval`.
@@ -102,7 +112,7 @@
 //! let mut x = 1.0;
 //! for _ in 0..10 {
 //!     x = expr.set_var("x", x).eval().unwrap();
-//!     assert_eq!(expr.set_var("x", x).eval(), Ok(1.0 + 0.5 * x.sin()));
+//!     assert_eq!(expr.set_var("x", x).eval().unwrap(), 1.0 + 0.5 * x.sin());
 //! }
 //! ```
 //! 
@@ -112,21 +122,20 @@
 //! # use lieval::*;
 //! # 
 //! let expr1 = Expr::new("1+x").unwrap();
-//! assert_eq!((expr1 + ex!("2*x")).set_var("x", 2.0).eval(), Ok(7.0));
-//! 
-//! assert_eq!((ex!("1+x, 2+x, 3+x") + ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals(), Ok(vec![7.0, 10.0, 13.0]));
+//! assert_eq!((expr1 + ex!("2*x")).set_var("x", 2.0).eval().unwrap(), 7.0);
+//! assert_eq!((ex!("1+x, 2+x, 3+x") + ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals().unwrap(), vec![7.0, 10.0, 13.0]);
 //! 
 //! // broadcasting
 //! let expr1 = Expr::new("1+x").unwrap();
 //! let expr2 = Expr::new("2*x, 3*x, 4*x").unwrap();
-//! assert_eq!((ex!("1+x") * ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals(), Ok(vec![12.0, 18.0, 24.0]));
-//! assert_eq!((ex!("1+x") * 2.0 * ex!("x") + ex!("2*x, 3*x, 4*x") + 1.0).set_var("x", 2.0).evals(), Ok(vec![17.0, 19.0, 21.0]));
+//! assert_eq!((ex!("1+x") * ex!("2*x, 3*x, 4*x")).set_var("x", 2.0).evals().unwrap(), vec![12.0, 18.0, 24.0]);
+//! assert_eq!((ex!("1+x") * 2.0 * ex!("x") + ex!("2*x, 3*x, 4*x") + 1.0).set_var("x", 2.0).evals().unwrap(), vec![17.0, 19.0, 21.0]);
 //! 
 //! // If variables conflict, the variable in the left expression takes precedence,
 //! // so use partial_eval beforehand.
 //! let mut expr1 = Expr::new("2*x").unwrap();
 //! expr1.set_var("x", 3.0).partial_eval().unwrap();
-//! assert_eq!((-ex!("1+x") * expr1).set_var("x", 2.0).eval(), Ok(-18.0));
+//! assert_eq!((-ex!("1+x") * expr1).set_var("x", 2.0).eval().unwrap(), -18.0);
 //! ```
 //! 
 //! ## API Documentation
